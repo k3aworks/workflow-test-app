@@ -38,13 +38,15 @@ def create_app() -> tk.Tk:
     def on_search_clicked() -> None:
         """Handle Search button click using the dummy backend from Sub 1.3."""
 
-        occupation = occupation_var.get()
-        results = wiki_backend.search_occupation(occupation)
+        query = occupation_var.get()
+        try:
+            results = wiki_backend.search_occupation(query)
+        except Exception:
+            results = []
 
-        # Replace list contents with the dummy results from the backend.
         results_listbox.delete(0, tk.END)
-        for name in results:
-            results_listbox.insert(tk.END, name)
+        for title in results:
+            results_listbox.insert(tk.END, title)
 
     search_button = ttk.Button(main_frame, text="Search", command=on_search_clicked)
     search_button.grid(row=0, column=2, pady=(0, 5), sticky="ew")

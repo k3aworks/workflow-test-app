@@ -1,43 +1,53 @@
 from typing import List
 
+import requests
 
-def search_occupation(occupation: str) -> List[str]:
-    """Return a temporary fake list of names for a given occupation.
+WIKIPEDIA_API_URL = "https://en.wikipedia.org/w/api.php"
+HEADERS = {
+    "User-Agent": "workflow-test-app/0.1 (https://github.com/k3aworks/workflow-test-app)",
+}
 
-    This is a placeholder implementation for Sub 1.3. It does not call any
-    external services. Later sub-issues will replace this with real
-    Wikipedia-backed logic.
+
+def search_occupation(occupation: str, limit: int = 10) -> List[str]:
+    """Search Wikipedia for pages related to the given occupation.
+
+    Sub 1.4 scope:
+    - Implement real searching logic
+    - Replace fake names with actual names from Wikipedia results
+    - Return names for the GUI listbox
     """
 
-    occupation = occupation.strip().lower()
-
+    occupation = (occupation or "").strip()
     if not occupation:
         return []
 
-    if "engineer" in occupation:
-        return [
-            "Alice Example (Engineer)",
-            "Bob Builder (Engineer)",
-            "Charlie Circuit (Engineer)",
-        ]
+    params = {
+        "action": "query",
+        "list": "search",
+        "format": "json",
+        "srsearch": occupation,
+        "srlimit": limit,
+    }
 
-    if "doctor" in occupation or "physician" in occupation:
-        return [
-            "Dana Care (Doctor)",
-            "Elliot Heal (Doctor)",
-            "Frank Clinic (Doctor)",
-        ]
+    try:
+        response = requests.get(
+            WIKIPEDIA_API_URL,
+            params=params,
+            headers=HEADERS,
+            timeout=5,
+        )
+        response.raise_for_status()
+        data = response.json()
+    except Exception:
+        # On any network/parse error, fall back to an empty list
+        return []
 
-    if "teacher" in occupation or "professor" in occupation:
-        return [
-            "Grace Guide (Teacher)",
-            "Henry Learn (Teacher)",
-            "Ivy Mentor (Teacher)",
-        ]
+    search_results = data.get("query", {}).get("search", [])
+    titles: List[str] = []
 
-    # Default fallback dummy data
-    return [
-        "Jamie Sample",
-        "Kai Placeholder",
-        "Lee Demo",
-    ]
+    for item in search_results:
+        title = item.get("title")
+        if isinstance(title, str) and title.strip():
+            titles.append(title.strip())
+
+    return titles
