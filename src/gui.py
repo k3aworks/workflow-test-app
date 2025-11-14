@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 
+import wiki_backend
+
 
 def create_app() -> tk.Tk:
     """Create the main Tkinter window for occupation search.
@@ -34,14 +36,15 @@ def create_app() -> tk.Tk:
     occupation_entry.grid(row=0, column=1, padx=(0, 5), pady=(0, 5), sticky="ew")
 
     def on_search_clicked() -> None:
-        """Placeholder callback for the Search button.
+        """Handle Search button click using the dummy backend from Sub 1.3."""
 
-        Sub 1.2 only requires wiring up the layout. Actual search
-        behavior will be implemented in later sub-issues.
-        """
+        occupation = occupation_var.get()
+        results = wiki_backend.search_occupation(occupation)
 
-        # For now we just clear the list so it is obviously connected to the button.
+        # Replace list contents with the dummy results from the backend.
         results_listbox.delete(0, tk.END)
+        for name in results:
+            results_listbox.insert(tk.END, name)
 
     search_button = ttk.Button(main_frame, text="Search", command=on_search_clicked)
     search_button.grid(row=0, column=2, pady=(0, 5), sticky="ew")
