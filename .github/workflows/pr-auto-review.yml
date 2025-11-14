@@ -1,0 +1,26 @@
+name: Auto-approve sub-issue PRs
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  auto-approve:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false && startsWith(github.head_ref, 'sub-') && github.event.pull_request.base.ref == 'main'
+
+    steps:
+      - name: Auto-approve PR to move it to In review (Step 5)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            await github.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              event: 'APPROVE',
+              body: 'Auto-approval from CI to move PR to In review (Step 5).'
+            });
