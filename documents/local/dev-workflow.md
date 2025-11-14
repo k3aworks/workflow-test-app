@@ -32,6 +32,9 @@ We follow this exact order:
   - From `main`, create and switch to a branch named from the sub-issue, for example:
     - Issue: `Sub 1.1 - Setup initial project structure`  
     - Branch: `sub-1-1-setup-initial-project-structure`
+  - Create or update `documents/local/current-sub-issue.md` with the current sub-issue information (issue number, title, branch name, and current workflow step).
+  - Commit the `current-sub-issue.md` change on this branch.
+  - Push the new branch to GitHub so it exists remotely.
 
 - **Resulting Status**
   - **Issue:** `Ready`  
@@ -42,8 +45,6 @@ We follow this exact order:
 ## 3. Create a pull request linked to the sub-issue
 
 - **Action**
-  - Push the branch to GitHub.  
-  - Update `documents/local/current-sub-issue.md` with the current sub-issue information (issue number, title, branch name, and current workflow step). This provides a minimal, non-functional change for the branch and documents what we are working on.
   - Open a PR from this branch into `main`.
   - In the PR description, include a closing keyword linking the sub-issue, for example:
 
@@ -66,6 +67,7 @@ At this point the issue is officially **In progress** and we do the bulk of the 
 - **Action**
   - Implement all code changes needed to complete the sub-issue on this branch.  
   - Make focused commits related only to this sub-issue.
+  - After committing, push the branch so the PR and CI/automation see the latest changes.
 
 - **Resulting Status**
   - **Issue:** `In progress` (unchanged)  
