@@ -1,0 +1,150 @@
+name: Move linked issue to In review on PR approval
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  pull-requests: read
+  issues: write
+  contents: read
+  projects: write
+
+jobs:
+  move-linked-issue-to-in-review:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Move linked issue to In review when PR is approved
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const review = context.payload.review;
+            const pr = context.payload.pull_request;
+
+            if (!review || review.state.toLowerCase() !== "approved") {
+              core.info("Review is not an approval, nothing to do.");
+              return;
+            }
+
+            const body = pr.body || "";
+
+            // Extract linked issues from Fixes/Closes syntax
+            const issueNumbers = new Set();
+            const regex = /\b(?:Fixes|Fixed|Fix|Closes|Closed|Close)\s+#(\d+)/gi;
+            let match;
+            while ((match = regex.exec(body)) !== null) {
+              issueNumbers.add(parseInt(match[1], 10));
+            }
+
+            if (issueNumbers.size === 0) {
+              core.info("No linked issues found via Fixes/Closes syntax in PR body.");
+              return;
+            }
+
+            const { owner, repo } = context.repo;
+
+            // Look up the Projects v2 board and its Status field / In review option
+            const projectsData = await github.graphql(
+              `query($owner: String!) {
+                user(login: $owner) {
+                  projectsV2(first: 20) {
+                    nodes {
+                      id
+                      title
+                      number
+                      fields(first: 20) {
+                        nodes {
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            name
+                            options { id name }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }`,
+              { owner }
+            );
+
+            const projects = projectsData.user?.projectsV2?.nodes || [];
+            const project = projects.find(p => p.title === "workflow-test-kanban");
+
+            if (!project) {
+              core.warning("Project 'workflow-test-kanban' not found; cannot update Status.");
+              return;
+            }
+
+            const statusField = (project.fields.nodes || []).find(f => f && f.name === "Status");
+            if (!statusField) {
+              core.warning("Status field not found on project 'workflow-test-kanban'.");
+              return;
+            }
+
+            const inReviewOption = (statusField.options || []).find(o => o && o.name === "In review");
+            if (!inReviewOption) {
+              core.warning("Status option 'In review' not found on project 'workflow-test-kanban'.");
+              return;
+            }
+
+            const projectId = project.id;
+            const statusFieldId = statusField.id;
+            const inReviewOptionId = inReviewOption.id;
+
+            for (const issueNumber of issueNumbers) {
+              core.info(`Processing linked issue #${issueNumber}`);
+
+              const issue = await github.rest.issues.get({ owner, repo, issue_number: issueNumber });
+              const issueNodeId = issue.data.node_id;
+
+              const issueProjectsData = await github.graphql(
+                `query($id: ID!) {
+                  node(id: $id) {
+                    ... on Issue {
+                      projectItems(first: 20) {
+                        nodes {
+                          id
+                          project { id title number }
+                        }
+                      }
+                    }
+                  }
+                }`,
+                { id: issueNodeId }
+              );
+
+              const projectItems = issueProjectsData.node?.projectItems?.nodes || [];
+              const projectItem = projectItems.find(item => item.project && item.project.id === projectId);
+
+              if (!projectItem) {
+                core.info(`Issue #${issueNumber} is not on project 'workflow-test-kanban'; skipping.`);
+                continue;
+              }
+
+              const itemId = projectItem.id;
+
+              core.info(`Setting Status = In review for issue #${issueNumber} on project 'workflow-test-kanban'.`);
+
+              await github.graphql(
+                `mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                  updateProjectV2ItemFieldValue(
+                    input: {
+                      projectId: $projectId,
+                      itemId: $itemId,
+                      fieldId: $fieldId,
+                      value: { singleSelectOptionId: $optionId }
+                    }
+                  ) {
+                    projectV2Item { id }
+                  }
+                }`,
+                {
+                  projectId,
+                  itemId,
+                  fieldId: statusFieldId,
+                  optionId: inReviewOptionId,
+                }
+              );
+            }
