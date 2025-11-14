@@ -8,7 +8,7 @@ permissions:
   pull-requests: read
   issues: write
   contents: read
-  projects: write
+  repository-projects: write
 
 jobs:
   move-linked-issue-to-in-review:

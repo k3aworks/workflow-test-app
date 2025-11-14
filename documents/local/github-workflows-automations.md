@@ -69,3 +69,14 @@
   - When the main issue is closed or reopened by this workflow, existing rules apply:  
     - Rule 7️⃣ "Item closed" → Status = `Done`  
     - Rule 8️⃣ "Item reopened" → Status = `Ready`
+
+12️⃣ **Move linked issue to In review on PR approval**
+
+- **Implemented by:** `.github/workflows/issue-to-in-review-on-pr-approval.yml`  
+- **Trigger:** When a pull request review is **submitted** with state `approved`  
+- **Behavior:**  
+  - Parse the PR body for `Fixes #<number>` / `Closes #<number>` syntax to find linked issues.  
+  - For each linked issue that is on the `workflow-test-kanban` project, set its `Status` field to **`In review`** using the Projects v2 API.  
+- **Resulting Status**  
+  - **Issue:** `In review` (kept in sync with the approved PR)  
+  - **PR:** `In review` (via rule 5️⃣ "Code review approved")
