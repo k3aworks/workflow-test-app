@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 
+import webbrowser
 import wiki_backend
 
 
@@ -35,18 +36,40 @@ def create_app() -> tk.Tk:
     occupation_entry = ttk.Entry(main_frame, textvariable=occupation_var, width=40)
     occupation_entry.grid(row=0, column=1, padx=(0, 5), pady=(0, 5), sticky="ew")
 
+    # Holds the latest search results with URLs so we can open them on click.
+    search_results_with_urls = []
+
     def on_search_clicked() -> None:
         """Handle Search button click using the dummy backend from Sub 1.3."""
 
         query = occupation_var.get()
         try:
-            results = wiki_backend.search_occupation(query)
+            results = wiki_backend.search_occupation_with_urls(query)
         except Exception:
             results = []
 
+        search_results_with_urls.clear()
+        search_results_with_urls.extend(results)
+
         results_listbox.delete(0, tk.END)
-        for title in results:
-            results_listbox.insert(tk.END, title)
+        for item in results:
+            title = item.get("title")
+            if isinstance(title, str):
+                results_listbox.insert(tk.END, title)
+
+    def on_result_double_click(event: tk.Event) -> None:
+        """Open the Wikipedia page for the selected result in a browser."""
+
+        if not results_listbox.curselection():
+            return
+
+        index = results_listbox.curselection()[0]
+        if not (0 <= index < len(search_results_with_urls)):
+            return
+
+        url = search_results_with_urls[index].get("url")
+        if isinstance(url, str) and url:
+            webbrowser.open(url)
 
     search_button = ttk.Button(main_frame, text="Search", command=on_search_clicked)
     search_button.grid(row=0, column=2, pady=(0, 5), sticky="ew")
@@ -60,6 +83,7 @@ def create_app() -> tk.Tk:
 
     results_listbox = tk.Listbox(results_frame, height=10)
     results_listbox.grid(row=0, column=0, sticky="nsew")
+    results_listbox.bind("<Double-Button-1>", on_result_double_click)
 
     scrollbar = ttk.Scrollbar(results_frame, orient="vertical", command=results_listbox.yview)
     scrollbar.grid(row=0, column=1, sticky="ns")
