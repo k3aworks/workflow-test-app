@@ -3,6 +3,9 @@ from typing import List
 import requests
 
 WIKIPEDIA_API_URL = "https://en.wikipedia.org/w/api.php"
+HEADERS = {
+    "User-Agent": "workflow-test-app/0.1 (https://github.com/k3aworks/workflow-test-app)",
+}
 
 
 def search_occupation(occupation: str, limit: int = 10) -> List[str]:
@@ -27,7 +30,12 @@ def search_occupation(occupation: str, limit: int = 10) -> List[str]:
     }
 
     try:
-        response = requests.get(WIKIPEDIA_API_URL, params=params, timeout=5)
+        response = requests.get(
+            WIKIPEDIA_API_URL,
+            params=params,
+            headers=HEADERS,
+            timeout=5,
+        )
         response.raise_for_status()
         data = response.json()
     except Exception:

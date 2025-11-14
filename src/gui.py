@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 
+import wiki_backend
+
 
 def create_app() -> tk.Tk:
     """Create the main Tkinter window for occupation search.
@@ -41,7 +43,15 @@ def create_app() -> tk.Tk:
         """
 
         # For now we just clear the list so it is obviously connected to the button.
+        query = occupation_var.get()
+        try:
+            results = wiki_backend.search_occupation(query)
+        except Exception:
+            results = []
+
         results_listbox.delete(0, tk.END)
+        for title in results:
+            results_listbox.insert(tk.END, title)
 
     search_button = ttk.Button(main_frame, text="Search", command=on_search_clicked)
     search_button.grid(row=0, column=2, pady=(0, 5), sticky="ew")
