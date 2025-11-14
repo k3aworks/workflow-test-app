@@ -43,6 +43,7 @@ We follow this exact order:
 
 - **Action**
   - Push the branch to GitHub.  
+  - Update `documents/local/current-sub-issue.md` with the current sub-issue information (issue number, title, branch name, and current workflow step). This provides a minimal, non-functional change for the branch and documents what we are working on.
   - Open a PR from this branch into `main`.
   - In the PR description, include a closing keyword linking the sub-issue, for example:
 
