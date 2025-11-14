@@ -2,13 +2,19 @@
 
 This document describes how we work on sub-issues in the *workflow-test-app* repo, in a way that matches our GitHub Project automation rules and our desired issue/PR status transitions.
 
+ALWAYS DO THE STEPS IN ORDER AND CREATE A TASK FOR EACH STEP
+
+**Approval rule**
+- After each numbered step (1-7), wait for the maintainer to explicitly approve that step before starting the next one.
+- When using the Cascade assistant, it must ask for approval before executing each step and must not move to the next step without clear confirmation.
+
 We follow this exact order:
 
 1. Create sub-issue → Issue `Ready`, no PR  
 2. Create branch → Issue `Ready`, no PR  
-3. Create PR with `Fixes #<issue>` → Issue `In progress`, PR `Ready`  
+3. Create PR with `Fixes #<issue>` and assign `kareemdrive001-dev` as reviewer → Issue `In progress`, PR `Ready`  
 4. Do the work on the PR branch → Issue `In progress`, PR `Ready`  
-5. PR moves to `In review` (auto-approval by CI) → Issue `In progress`, PR `In review`  
+5. Approve PR (review by `kareemdrive001-dev`) → Issue `In progress`, PR `In review`  
 6. Test / verify result → Issue `In progress`, PR `In review`  
 7. Merge PR → Issue `Done`, PR `Done`
 
@@ -29,7 +35,23 @@ We follow this exact order:
 ## 2. Create a branch for the sub-issue
 
 - **Action**
-  - From `main`, create and switch to a branch named from the sub-issue, for example:
+  - From `main`, create and switch to a branch named from the sub-issue. **Always use a command that both creates and switches the branch.**
+
+  - Typical local flow (new branch not yet on GitHub):
+
+    ```bash
+    git checkout main
+    git checkout -b sub-1-2-add-gui-layout
+    ```
+
+  - If the branch was already created on GitHub (e.g. via an API or MCP tool), first fetch and then create the local tracking branch:
+
+    ```bash
+    git fetch origin
+    git checkout -b sub-1-2-add-gui-layout origin/sub-1-2-add-gui-layout
+    ```
+
+  - Example naming pattern:
     - Issue: `Sub 1.1 - Setup initial project structure`  
     - Branch: `sub-1-1-setup-initial-project-structure`
 
@@ -45,10 +67,13 @@ We follow this exact order:
   - Push the branch to GitHub.  
   - Open a PR from this branch into `main`.
   - In the PR description, include a closing keyword linking the sub-issue, for example:
+  - Assign `kareemdrive001-dev` as the reviewer on the PR. This is because `kareemdrive001-dev` is the designated reviewer for this project, and their approval is required before proceeding.
 
     ```text
     Fixes #<sub-issue-number>
     ```
+
+Using `kareemdrive001-dev` as the standard reviewer makes it easy to complete Step 5 with `gh pr review` and ensures the "Code review approved" project rule fires consistently.
 
 - **Resulting Status** (from automation rules)
   - **Issue:** `In progress`  
@@ -72,11 +97,18 @@ At this point the issue is officially **In progress** and we do the bulk of the 
 
 ---
 
-## 5. PR moves to In review (auto-approval by CI)
+## 5. Approve the pull request
 
 - **Action**
-  - A GitHub Actions workflow (`.github/workflows/pr-auto-review.yml`) automatically approves qualifying PRs (non-draft `sub-*` branches into `main`), which counts as a code review approval.
-  - You may still perform a manual review/approval if desired, but it is no longer required for the status transition.
+  - As `kareemdrive001-dev`, approve the PR using GitHub CLI, for example:
+
+    ```bash
+    gh pr review <pr-number> --approve
+    ```
+
+  - Alternatively, approve the PR from the GitHub web UI as `kareemdrive001-dev`.
+  - **Only `kareemdrive001-dev` (or another explicitly designated reviewer) should perform this approval step.**
+  - If Cascade is assisting, it must ask the maintainer for approval before Step 5. After the maintainer confirms, Cascade runs the `gh pr review` command on their behalf as `kareemdrive001-dev`.
 
 - **Resulting Status** (from automation rules)
   - **Issue:** `In progress`  
@@ -84,7 +116,7 @@ At this point the issue is officially **In progress** and we do the bulk of the 
   - **PR:** `In review`  
     - Rule: "Code review approved" → Status = In review (for the PR).
 
-Now the work is done and the PR has effectively been approved (by CI or manually). Next we validate the result.
+Now the work is done and the PR has been approved. Next we validate the result.
 
 ---
 
@@ -122,8 +154,10 @@ No extra manual "close issue" step is required as long as the PR description inc
 
 1. **Sub-issue created** and added to project → Issue `Ready`, no PR.  
 2. **Branch created** for that sub-issue → Issue `Ready`, no PR.  
-3. **PR created** with `Fixes #<issue>` → Issue `In progress`, PR `Ready`.  
+3. **PR created** with `Fixes #<issue>` and `kareemdrive001-dev` assigned as reviewer → Issue `In progress`, PR `Ready`.  
 4. **Work done** on the PR branch → Issue `In progress`, PR `Ready`.  
-5. **PR moves to In review (auto-approval by CI)** → Issue `In progress`, PR `In review`.  
+5. **PR approved by `kareemdrive001-dev`** → Issue `In progress`, PR `In review`.  
 6. **Result tested / verified** → Issue `In progress`, PR `In review`.  
 7. **PR merged** → Issue `Done`, PR `Done`.
+
+**Note:** Each step requires explicit approval from the maintainer before proceeding.
