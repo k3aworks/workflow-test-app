@@ -1,5 +1,6 @@
 from typing import List, Dict, Optional
 
+import re
 import requests
 
 WIKIPEDIA_API_URL = "https://en.wikipedia.org/w/api.php"
@@ -109,6 +110,82 @@ def _extract_first_wikilink_text(value: str) -> str:
         parts = inner.split("|")
         text = parts[-1].strip()
     return text
+
+
+def _extract_first_year(text: str) -> Optional[int]:
+    if not text:
+        return None
+
+    match = re.search(r"(\d{4})", text)
+    if not match:
+        return None
+
+    try:
+        year = int(match.group(1))
+    except ValueError:
+        return None
+
+    if 1000 <= year <= 2100:
+        return year
+
+    return None
+
+
+def _extract_birth_year_from_short_description(text: str) -> Optional[int]:
+    if not text:
+        return None
+
+    # Prefer an explicit "born YYYY" if present anywhere.
+    born_match = re.search(r"born\s+(\d{4})", text)
+    if born_match:
+        try:
+            year = int(born_match.group(1))
+        except ValueError:
+            year = None
+        if year is not None and 1000 <= year <= 2100:
+            return year
+
+    # Otherwise, look inside the first parentheses, which often contain dates.
+    paren_match = re.search(r"\(([^)]*)\)", text)
+    if paren_match:
+        inner = paren_match.group(1)
+        year_in_paren = _extract_first_year(inner)
+        if year_in_paren is not None:
+            return year_in_paren
+
+    # Fallback: any year in the text.
+    return _extract_first_year(text)
+
+
+def _extract_birth_year_from_infobox(content: str) -> Optional[int]:
+    """Best-effort extraction of birth year from infobox lines.
+
+    Looks for fields such as "birth_date" or "born" and extracts a year
+    from their value.
+    """
+
+    if not content:
+        return None
+
+    for line in content.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        if "=" not in stripped:
+            continue
+
+        field_part, value_part = stripped[1:].split("=", 1)
+        field_name = field_part.strip().lower().replace("_", " ")
+        value = value_part.strip()
+
+        if field_name not in {"birth date", "birth_date", "born"}:
+            continue
+
+        year = _extract_first_year(value)
+        if year is not None:
+            return year
+
+    return None
 
 
 def _extract_nationality_from_short_description(content: str) -> Optional[str]:
@@ -225,3 +302,71 @@ def fetch_nationality(page_title: str) -> Optional[str]:
         return None
 
     return nationality_value
+
+
+def fetch_birth_year(page_title: str) -> Optional[int]:
+    """Return the birth year for the given page, if it can be inferred.
+
+    For Sub 2.3 we use a pragmatic approach based on the page's short
+    description, which often looks like::
+
+        "Indian actor and politician (born 1974)"
+
+    or::
+
+        "German-born theoretical physicist (18791955)".
+
+    In both cases, the first 4-digit year is the birth year.
+    """
+
+    page_title = (page_title or "").strip()
+    if not page_title:
+        return None
+
+    params = {
+        "action": "query",
+        "prop": "pageprops|revisions",
+        "rvprop": "content",
+        "rvslots": "main",
+        "formatversion": 2,
+        "titles": page_title,
+        "format": "json",
+    }
+
+    try:
+        response = requests.get(
+            WIKIPEDIA_API_URL,
+            params=params,
+            headers=HEADERS,
+            timeout=5,
+        )
+        response.raise_for_status()
+        data = response.json()
+    except Exception:
+        return None
+
+    pages = data.get("query", {}).get("pages", [])
+    if not pages:
+        return None
+
+    page = pages[0]
+
+    # First, try to get the birth year from the infobox in the wikitext.
+    revisions = page.get("revisions") or []
+    if revisions:
+        slots = revisions[0].get("slots") or {}
+        content = slots.get("main", {}).get("content")
+        if isinstance(content, str):
+            year = _extract_birth_year_from_infobox(content)
+            if year is not None:
+                return year
+
+    # Fallback: try to infer from the short description via pageprops.
+    pageprops = page.get("pageprops") or {}
+    short_desc = pageprops.get("wikibase-shortdesc") or ""
+
+    year = _extract_birth_year_from_short_description(short_desc)
+    if year is None:
+        return None
+
+    return year
