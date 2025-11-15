@@ -70,9 +70,20 @@ jobs:
             );
 
             const projects = projectsData.user?.projectsV2?.nodes || [];
-            const project = projects.find(p => p.title === "workflow-test-kanban");
+
+            core.info(`Fetched ${projects.length} projects for owner ${owner}.`);
+            for (const p of projects) {
+              if (p) {
+                core.info(`Project candidate: title="${p.title}", number=${p.number}`);
+              }
+            }
+
+            const project = projects.find(p => p && p.title === "workflow-test-kanban");
 
             if (!project) {
+              if (!projectsData.user) {
+                core.warning(`No user node found when querying projectsV2 for owner ${owner}.`);
+              }
               core.warning("Project 'workflow-test-kanban' not found; cannot update Status.");
               return;
             }
