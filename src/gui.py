@@ -37,7 +37,6 @@ def create_app() -> tk.Tk:
     occupation_entry = ttk.Entry(main_frame, textvariable=occupation_var, width=40)
     occupation_entry.grid(row=0, column=1, padx=(0, 5), pady=(0, 5), sticky="ew")
 
-    # Holds the latest search results with URLs so we can open them on click.
     search_results_with_urls = []
 
     def on_search_clicked() -> None:
@@ -109,6 +108,45 @@ def create_app() -> tk.Tk:
     birth_year_label.grid(row=2, column=0, padx=(0, 5), sticky="w")
     birth_year_value_label = ttk.Label(info_frame, text="")
     birth_year_value_label.grid(row=2, column=1, sticky="w")
+
+    def update_info_panel_from_index(index: int) -> None:
+        if not (0 <= index < len(search_results_with_urls)):
+            name_value_label.config(text="")
+            nationality_value_label.config(text="")
+            birth_year_value_label.config(text="")
+            return
+
+        entry = search_results_with_urls[index]
+        title = entry.get("title")
+        if isinstance(title, str) and title.strip():
+            name_value_label.config(text=title.strip())
+        else:
+            name_value_label.config(text="")
+
+        try:
+            nationality = wiki_backend.fetch_nationality(title)
+        except Exception:
+            nationality = None
+
+        try:
+            birth_year = wiki_backend.fetch_birth_year(title)
+        except Exception:
+            birth_year = None
+
+        nationality_value_label.config(text=nationality if nationality else "Unknown")
+        birth_year_value_label.config(
+            text=str(birth_year) if isinstance(birth_year, int) else "Unknown"
+        )
+
+    def on_result_select(event: tk.Event) -> None:
+        if not results_listbox.curselection():
+            update_info_panel_from_index(-1)
+            return
+
+        index = results_listbox.curselection()[0]
+        update_info_panel_from_index(index)
+
+    results_listbox.bind("<<ListboxSelect>>", on_result_select)
 
     return root
 
