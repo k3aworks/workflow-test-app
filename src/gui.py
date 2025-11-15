@@ -119,9 +119,13 @@ def create_app() -> tk.Tk:
         entry = search_results_with_urls[index]
         title = entry.get("title")
         if isinstance(title, str) and title.strip():
-            name_value_label.config(text=title.strip())
+            title_text = title.strip()
+            name_value_label.config(text=title_text)
         else:
-            name_value_label.config(text="")
+            name_value_label.config(text="Unknown")
+            nationality_value_label.config(text="Unknown")
+            birth_year_value_label.config(text="Unknown")
+            return
 
         try:
             nationality = wiki_backend.fetch_nationality(title)
