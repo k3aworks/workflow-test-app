@@ -1,6 +1,6 @@
 # Current Sub-issue
 
-- Issue: #26
-- Title: Sub 2.1 - Add empty info panel in GUI
-- Branch: sub-2-1-add-empty-info-panel-in-gui
-- Workflow step: 4 – Implementation done
+- Issue: #27
+- Title: Sub 2.2 - Fetch nationality from Wikipedia page
+- Branch: sub-2-2-fetch-nationality-from-wikipedia-page
+- Workflow step: 6 – Tested locally, ready to merge
