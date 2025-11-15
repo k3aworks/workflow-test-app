@@ -113,11 +113,6 @@ def _extract_first_wikilink_text(value: str) -> str:
 
 
 def _extract_first_year(text: str) -> Optional[int]:
-    """Extract the first 4-digit year from the given text.
-
-    Used as a best-effort helper for birth year parsing.
-    """
-
     if not text:
         return None
 
@@ -132,6 +127,63 @@ def _extract_first_year(text: str) -> Optional[int]:
 
     if 1000 <= year <= 2100:
         return year
+
+    return None
+
+
+def _extract_birth_year_from_short_description(text: str) -> Optional[int]:
+    if not text:
+        return None
+
+    # Prefer an explicit "born YYYY" if present anywhere.
+    born_match = re.search(r"born\s+(\d{4})", text)
+    if born_match:
+        try:
+            year = int(born_match.group(1))
+        except ValueError:
+            year = None
+        if year is not None and 1000 <= year <= 2100:
+            return year
+
+    # Otherwise, look inside the first parentheses, which often contain dates.
+    paren_match = re.search(r"\(([^)]*)\)", text)
+    if paren_match:
+        inner = paren_match.group(1)
+        year_in_paren = _extract_first_year(inner)
+        if year_in_paren is not None:
+            return year_in_paren
+
+    # Fallback: any year in the text.
+    return _extract_first_year(text)
+
+
+def _extract_birth_year_from_infobox(content: str) -> Optional[int]:
+    """Best-effort extraction of birth year from infobox lines.
+
+    Looks for fields such as "birth_date" or "born" and extracts a year
+    from their value.
+    """
+
+    if not content:
+        return None
+
+    for line in content.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        if "=" not in stripped:
+            continue
+
+        field_part, value_part = stripped[1:].split("=", 1)
+        field_name = field_part.strip().lower().replace("_", " ")
+        value = value_part.strip()
+
+        if field_name not in {"birth date", "birth_date", "born"}:
+            continue
+
+        year = _extract_first_year(value)
+        if year is not None:
+            return year
 
     return None
 
@@ -273,7 +325,9 @@ def fetch_birth_year(page_title: str) -> Optional[int]:
 
     params = {
         "action": "query",
-        "prop": "pageprops",
+        "prop": "pageprops|revisions",
+        "rvprop": "content",
+        "rvslots": "main",
         "formatversion": 2,
         "titles": page_title,
         "format": "json",
@@ -295,10 +349,23 @@ def fetch_birth_year(page_title: str) -> Optional[int]:
     if not pages:
         return None
 
-    pageprops = pages[0].get("pageprops") or {}
+    page = pages[0]
+
+    # First, try to get the birth year from the infobox in the wikitext.
+    revisions = page.get("revisions") or []
+    if revisions:
+        slots = revisions[0].get("slots") or {}
+        content = slots.get("main", {}).get("content")
+        if isinstance(content, str):
+            year = _extract_birth_year_from_infobox(content)
+            if year is not None:
+                return year
+
+    # Fallback: try to infer from the short description via pageprops.
+    pageprops = page.get("pageprops") or {}
     short_desc = pageprops.get("wikibase-shortdesc") or ""
 
-    year = _extract_first_year(short_desc)
+    year = _extract_birth_year_from_short_description(short_desc)
     if year is None:
         return None
 
