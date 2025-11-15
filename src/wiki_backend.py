@@ -111,6 +111,50 @@ def _extract_first_wikilink_text(value: str) -> str:
     return text
 
 
+def _extract_nationality_from_short_description(content: str) -> Optional[str]:
+    """Best-effort extraction of nationality from the Short description template.
+
+    Many biographies use a template like::
+
+        {{Short description|Indian actor and politician (born 1974)}}
+
+    We treat the first word of the short description (before any parentheses)
+    as the nationality, e.g. "Indian".
+    """
+
+    marker = "{{short description|"
+
+    for line in content.splitlines():
+        lower = line.lower()
+        idx = lower.find(marker)
+        if idx == -1:
+            continue
+
+        after = line[idx + len(marker) :]
+        if "}}" in after:
+            desc = after.split("}}", 1)[0].strip()
+        else:
+            desc = after.strip()
+
+        if not desc:
+            continue
+
+        # Drop any trailing parenthetical like "(born 1974)".
+        desc_no_paren = desc.split("(", 1)[0].strip()
+        if not desc_no_paren:
+            continue
+
+        parts = desc_no_paren.split()
+        if not parts:
+            continue
+
+        first_word = parts[0].strip()
+        if first_word:
+            return first_word
+
+    return None
+
+
 def fetch_nationality(page_title: str) -> Optional[str]:
     page_title = (page_title or "").strip()
     if not page_title:
@@ -156,16 +200,24 @@ def fetch_nationality(page_title: str) -> Optional[str]:
         stripped = line.strip()
         if not stripped.startswith("|"):
             continue
-        lower = stripped.lower()
-        if not lower.startswith("| nationality"):
+        # Expect lines like "| nationality = [[Indian]]" or "|citizenship=[[Indian]]".
+        if "=" not in stripped:
             continue
-        _, _, value = stripped.partition("=")
-        nationality_value = value.strip()
+        field_part, value_part = stripped[1:].split("=", 1)
+        field_name = field_part.strip().lower()
+        value = value_part.strip()
+
+        if field_name not in {"nationality", "citizenship"}:
+            continue
+
+        nationality_value = value
         if nationality_value:
             break
 
     if not nationality_value:
-        return None
+        nationality_value = _extract_nationality_from_short_description(content)
+        if not nationality_value:
+            return None
 
     nationality_value = _extract_first_wikilink_text(nationality_value)
     nationality_value = nationality_value.strip()

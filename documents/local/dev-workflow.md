@@ -33,6 +33,13 @@ Once you explicitly allow it for a given sub-issue (for example: *"Start Sub X.Y
 ## 2. Create a branch for the sub-issue
 
 - **Action**
+  - First make sure your local `main` is up to date with the remote (especially after merging a PR on GitHub):
+
+    ```bash
+    git switch main
+    git pull
+    ```
+
   - From `main`, create and switch to a branch named from the sub-issue, for example:
     - Issue: `Sub 1.1 - Setup initial project structure`  
     - Branch: `sub-1-1-setup-initial-project-structure`
