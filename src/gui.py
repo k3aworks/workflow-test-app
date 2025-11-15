@@ -27,6 +27,7 @@ def create_app() -> tk.Tk:
 
     main_frame.columnconfigure(1, weight=1)
     main_frame.rowconfigure(1, weight=1)
+    main_frame.rowconfigure(2, weight=0)
 
     # Row 0: label, entry, search button
     occupation_label = ttk.Label(main_frame, text="Occupation:")
@@ -88,6 +89,26 @@ def create_app() -> tk.Tk:
     scrollbar = ttk.Scrollbar(results_frame, orient="vertical", command=results_listbox.yview)
     scrollbar.grid(row=0, column=1, sticky="ns")
     results_listbox.configure(yscrollcommand=scrollbar.set)
+
+    info_frame = ttk.Frame(main_frame, padding=(0, 10, 0, 0))
+    info_frame.grid(row=2, column=0, columnspan=3, sticky="nsew")
+
+    info_frame.columnconfigure(1, weight=1)
+
+    name_label = ttk.Label(info_frame, text="Name:")
+    name_label.grid(row=0, column=0, padx=(0, 5), sticky="w")
+    name_value_label = ttk.Label(info_frame, text="")
+    name_value_label.grid(row=0, column=1, sticky="w")
+
+    nationality_label = ttk.Label(info_frame, text="Nationality:")
+    nationality_label.grid(row=1, column=0, padx=(0, 5), sticky="w")
+    nationality_value_label = ttk.Label(info_frame, text="")
+    nationality_value_label.grid(row=1, column=1, sticky="w")
+
+    birth_year_label = ttk.Label(info_frame, text="Birth Year:")
+    birth_year_label.grid(row=2, column=0, padx=(0, 5), sticky="w")
+    birth_year_value_label = ttk.Label(info_frame, text="")
+    birth_year_value_label.grid(row=2, column=1, sticky="w")
 
     return root
 

@@ -1,6 +1,6 @@
 # Current Sub-issue
 
-- Issue: #25
-- Title: Sub 1.5 - Open Wikipedia page on click
-- Branch: sub-1-5-open-wikipedia-page-on-click
-- Workflow step: 7 – PR merged (issue and PR Done)
+- Issue: #26
+- Title: Sub 2.1 - Add empty info panel in GUI
+- Branch: sub-2-1-add-empty-info-panel-in-gui
+- Workflow step: 4 – Implementation done
