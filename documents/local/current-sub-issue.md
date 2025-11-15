@@ -1,6 +1,6 @@
 # Current Sub-issue
 
-- Issue: #25
-- Title: Sub 1.5 - Open Wikipedia page on click
-- Branch: sub-1-5-open-wikipedia-page-on-click
-- Workflow step: 7 – PR merged (issue and PR Done)
+- Issue: #27
+- Title: Sub 2.2 - Fetch nationality from Wikipedia page
+- Branch: sub-2-2-fetch-nationality-from-wikipedia-page
+- Workflow step: 2 – Branch created
