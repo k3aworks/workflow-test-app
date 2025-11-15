@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 import requests
 
@@ -100,3 +100,76 @@ def search_occupation_with_urls(occupation: str, limit: int = 10) -> List[Dict[s
         results.append({"title": title.strip(), "url": url})
 
     return results
+
+
+def _extract_first_wikilink_text(value: str) -> str:
+    text = (value or "").strip()
+    if text.startswith("[[") and "]]" in text:
+        inner = text[2:].split("]]", 1)[0]
+        parts = inner.split("|")
+        text = parts[-1].strip()
+    return text
+
+
+def fetch_nationality(page_title: str) -> Optional[str]:
+    page_title = (page_title or "").strip()
+    if not page_title:
+        return None
+
+    params = {
+        "action": "query",
+        "prop": "revisions",
+        "rvprop": "content",
+        "rvslots": "main",
+        "formatversion": 2,
+        "titles": page_title,
+        "format": "json",
+    }
+
+    try:
+        response = requests.get(
+            WIKIPEDIA_API_URL,
+            params=params,
+            headers=HEADERS,
+            timeout=5,
+        )
+        response.raise_for_status()
+        data = response.json()
+    except Exception:
+        return None
+
+    pages = data.get("query", {}).get("pages", [])
+    if not pages:
+        return None
+
+    revisions = pages[0].get("revisions") or []
+    if not revisions:
+        return None
+
+    slots = revisions[0].get("slots") or {}
+    content = slots.get("main", {}).get("content")
+    if not isinstance(content, str):
+        return None
+
+    nationality_value: Optional[str] = None
+    for line in content.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        lower = stripped.lower()
+        if not lower.startswith("| nationality"):
+            continue
+        _, _, value = stripped.partition("=")
+        nationality_value = value.strip()
+        if nationality_value:
+            break
+
+    if not nationality_value:
+        return None
+
+    nationality_value = _extract_first_wikilink_text(nationality_value)
+    nationality_value = nationality_value.strip()
+    if not nationality_value:
+        return None
+
+    return nationality_value

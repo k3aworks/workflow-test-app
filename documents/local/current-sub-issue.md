@@ -3,4 +3,4 @@
 - Issue: #27
 - Title: Sub 2.2 - Fetch nationality from Wikipedia page
 - Branch: sub-2-2-fetch-nationality-from-wikipedia-page
-- Workflow step: 2 – Branch created
+- Workflow step: 4 – Implementation done
