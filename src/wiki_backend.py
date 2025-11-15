@@ -1,5 +1,6 @@
 from typing import List, Dict, Optional
 
+import re
 import requests
 
 WIKIPEDIA_API_URL = "https://en.wikipedia.org/w/api.php"
@@ -109,6 +110,30 @@ def _extract_first_wikilink_text(value: str) -> str:
         parts = inner.split("|")
         text = parts[-1].strip()
     return text
+
+
+def _extract_first_year(text: str) -> Optional[int]:
+    """Extract the first 4-digit year from the given text.
+
+    Used as a best-effort helper for birth year parsing.
+    """
+
+    if not text:
+        return None
+
+    match = re.search(r"(\d{4})", text)
+    if not match:
+        return None
+
+    try:
+        year = int(match.group(1))
+    except ValueError:
+        return None
+
+    if 1000 <= year <= 2100:
+        return year
+
+    return None
 
 
 def _extract_nationality_from_short_description(content: str) -> Optional[str]:
@@ -225,3 +250,56 @@ def fetch_nationality(page_title: str) -> Optional[str]:
         return None
 
     return nationality_value
+
+
+def fetch_birth_year(page_title: str) -> Optional[int]:
+    """Return the birth year for the given page, if it can be inferred.
+
+    For Sub 2.3 we use a pragmatic approach based on the page's short
+    description, which often looks like::
+
+        "Indian actor and politician (born 1974)"
+
+    or::
+
+        "German-born theoretical physicist (18791955)".
+
+    In both cases, the first 4-digit year is the birth year.
+    """
+
+    page_title = (page_title or "").strip()
+    if not page_title:
+        return None
+
+    params = {
+        "action": "query",
+        "prop": "pageprops",
+        "formatversion": 2,
+        "titles": page_title,
+        "format": "json",
+    }
+
+    try:
+        response = requests.get(
+            WIKIPEDIA_API_URL,
+            params=params,
+            headers=HEADERS,
+            timeout=5,
+        )
+        response.raise_for_status()
+        data = response.json()
+    except Exception:
+        return None
+
+    pages = data.get("query", {}).get("pages", [])
+    if not pages:
+        return None
+
+    pageprops = pages[0].get("pageprops") or {}
+    short_desc = pageprops.get("wikibase-shortdesc") or ""
+
+    year = _extract_first_year(short_desc)
+    if year is None:
+        return None
+
+    return year
