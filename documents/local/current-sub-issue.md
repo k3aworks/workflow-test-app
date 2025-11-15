@@ -1,6 +1,6 @@
 # Current Sub-issue
 
-- Issue: #29
-- Title: Sub 2.4 - Update UI to show selected person info
-- Branch: sub-2-4-update-ui-to-show-selected-person-info
-- Workflow step: 4 – Implementation done
+- Issue: #30
+- Title: Sub 2.5 - Handle missing info gracefully
+- Branch: sub-2-5-handle-missing-info-gracefully
+- Workflow step: 2 – Branch created
